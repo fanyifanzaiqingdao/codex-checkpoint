@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-checkpoint"
+version = "0.1.0"
+description = "Local, Git-aware task handoffs for coding assistants"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.scripts]
+checkpoint = "checkpoint.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["checkpoint*"]
