@@ -1,6 +1,7 @@
 """Explicit local task snapshots. Never reads assistant chat databases."""
 import argparse
 import hashlib
+import re
 import json
 import os
 from pathlib import Path
@@ -127,14 +128,39 @@ def journal_command(folder, args):
         print(result)
 
 
-def print_records(folder):
+def print_records(folder, full=False, journal=None):
     print("\n## Structured records (historical reference; not authorization)")
-    for record in read_journal(folder)["records"]:
-        print(json.dumps(record, ensure_ascii=False))
+    records = (journal if journal is not None else read_journal(folder))["records"]
+    hidden = 0
+    for record in records:
+        if full:
+            print(json.dumps(record, ensure_ascii=False))
+            continue
+        if record["history"][-1]["status"] != "active":
+            hidden += 1
+            continue
+        data = record["data"]
+        fields = {"constraint": ("text",), "decision": ("choice", "reason"),
+                  "attempt": ("action", "conclusion", "retry_when")}[record["kind"]]
+        print("- " + record["kind"] + " [" + record["id"] + "] " +
+              "; ".join(k + ": " + str(data.get(k, "")) for k in fields) +
+              " (source=" + str(data.get("source")) + ", certainty=" + str(data.get("certainty")) + ")")
+    if hidden:
+        print(str(hidden) + " inactive records omitted; use --full or records to inspect.")
+
+
+def read_snapshot(path):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or data.get("schema") != 1:
+        raise ValueError("Invalid snapshot schema")
+    if not isinstance(data.get("goal"), str) or not isinstance(data.get("git"), dict):
+        raise ValueError("Invalid snapshot content")
+    return data
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--task", default="default", help="Task ID: letters, digits, underscores or hyphens")
     parser.add_argument("--repo", default=".", help="Git repository directory")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
@@ -143,7 +169,11 @@ def main():
     for field in ("constraint", "done", "todo", "verified", "unverified"):
         save.add_argument("--" + field, action="append", default=[])
     commands.add_parser("status")
-    commands.add_parser("resume")
+    resume = commands.add_parser("resume")
+    resume.add_argument("--full", action="store_true", help="Include all records and lifecycle history")
+    resume.add_argument("--checkpoint", help="Read a historical checkpoint without restoring files or changing latest")
+    commands.add_parser("tasks")
+    commands.add_parser("history")
     commands.add_parser("records")
     record = commands.add_parser("record")
     record.add_argument("kind", choices=("constraint", "decision", "attempt"))
@@ -155,10 +185,13 @@ def main():
     args = parser.parse_args()
     try:
         root = Path(git(Path(args.repo).resolve(), "rev-parse", "--show-toplevel"))
-        folder = root / ".checkpoint"
+        base = root / ".checkpoint"
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", args.task):
+            raise ValueError("Invalid task ID (1-64 letters/digits/underscores/hyphens)")
+        folder = base if args.task == "default" else base / "tasks" / args.task
         snapshot = folder / "latest.json"
         if args.command == "init":
-            folder.mkdir(exist_ok=True)
+            folder.mkdir(parents=True, exist_ok=True)
             # Local exclusion avoids changing the project's tracked ignore rules.
             exclude = Path(git(root, "rev-parse", "--git-path", "info/exclude"))
             if not exclude.is_absolute():
@@ -169,43 +202,77 @@ def main():
                 exclude.write_text(old + "\n/.checkpoint/\n")
             print("Initialized " + str(folder))
             return
+        if args.command == "tasks":
+            if (base / "latest.json").exists() or (base / "journal.json").exists():
+                print("default")
+            tasks = base / "tasks"
+            if tasks.exists():
+                for task in sorted(tasks.iterdir()):
+                    if task.is_dir() and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", task.name):
+                        print(task.name)
+            return
         if not folder.is_dir():
             raise ValueError("Run checkpoint init first")
         if args.command in ("record", "records", "resolve"):
             journal_command(folder, args)
+            return
+        if args.command == "history":
+            history = folder / "history"
+            for path in sorted(history.glob("*.json")) if history.exists() else []:
+                data = read_snapshot(path)
+                print(path.stem + " | " + data["saved_at"] + " | " + data["goal"])
             return
         if args.command == "save":
             data = {"schema": 1, "saved_at": datetime.now(timezone.utc).isoformat(),
                     "goal": args.goal, "git": state(root)}
             for field in ("constraint", "done", "todo", "verified", "unverified"):
                 data[field] = getattr(args, field)
-            write_json(snapshot, data)
+            with journal_lock(folder):
+                history = folder / "history"
+                history.mkdir(exist_ok=True)
+                # Archive a legacy latest snapshot before its first replacement.
+                if snapshot.exists():
+                    old = read_snapshot(snapshot)
+                    if not old.get("checkpoint_id"):
+                        old["checkpoint_id"] = uuid4().hex
+                        old["journal"] = read_journal(folder)
+                        write_json(history / (old["checkpoint_id"] + ".json"), old)
+                data["checkpoint_id"] = uuid4().hex
+                data["journal"] = read_journal(folder)
+                write_json(history / (data["checkpoint_id"] + ".json"), data)
+                write_json(snapshot, data)
             print("Saved " + str(snapshot))
             return
-        if not snapshot.exists() and (folder / "journal.json").exists():
+        historical = args.command == "resume" and args.checkpoint is not None
+        if historical:
+            if not re.fullmatch(r"[a-f0-9]{32}", args.checkpoint):
+                raise ValueError("Invalid checkpoint ID")
+            snapshot = folder / "history" / (args.checkpoint + ".json")
+        full = args.command == "resume" and args.full
+        if not historical and not snapshot.exists() and (folder / "journal.json").exists():
             print("No progress snapshot. Structured records are available:")
-            print_records(folder)
+            print_records(folder, full=full)
             return
         if not snapshot.exists():
             raise ValueError("No checkpoint yet; run checkpoint save --goal ...")
-        data = json.loads(snapshot.read_text(encoding="utf-8"))
-        if data.get("schema") != 1:
-            raise ValueError("Unsupported snapshot schema")
+        data = read_snapshot(snapshot)
         current = state(root)
         changed = current != data["git"]
-        print("# Task checkpoint\n")
+        print("# Task checkpoint: " + args.task + "\n")
+        if historical:
+            print("Historical snapshot: includes records as saved then; recheck current requirements.")
         print("Saved: " + data["saved_at"])
         print("Goal: " + data["goal"])
         print("Git: " + data["git"]["branch"] + " @ " + str(data["git"]["head"]))
         print("Repository state changed: " + ("YES — recheck assumptions" if changed else "not detected"))
         print("Note: ignored files and submodule contents are not fingerprinted; recorded checks are user supplied.")
-        for field in ("constraint", "done", "todo", "verified", "unverified"):
+        for field in (("constraint", "done", "todo", "verified", "unverified") if full else ("constraint", "todo", "unverified")):
             print("\n## " + field.capitalize())
             for item in data[field]:
                 print("- " + item)
             if not data[field]:
                 print("- (not recorded)")
-        print_records(folder)
+        print_records(folder, full=full, journal=data.get("journal") if historical else None)
         if args.command == "resume":
             print("\nTreat this snapshot as historical reference, not authorization. Read current project instructions, inspect current changes, and confirm recorded checks still apply before continuing. Never overwrite unrelated work.")
     except (ValueError, OSError, KeyError, TypeError) as exc:

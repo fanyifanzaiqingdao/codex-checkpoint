@@ -61,3 +61,18 @@ checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECOR
   "text": "Do not change the database schema"
 }
 ```
+
+## タスクと履歴
+
+コマンドの前に --task を指定して分離します。省略時は旧形式の既定タスクです。保存ごとに history/ に進捗と記録を保持します。自動削除しません。古い形式の過去の記録は復元できません。通常は有効な記録のみ表示し、--full で全履歴を表示します。履歴の参照はコードや最新状態を変更しません。
+
+```sh
+checkpoint --task login init
+checkpoint --task login save --goal "Fix login" --todo "Test refresh"
+checkpoint --task billing init
+checkpoint tasks
+checkpoint --task login history
+checkpoint --task login resume
+checkpoint --task login resume --full
+checkpoint --task login resume --checkpoint CHECKPOINT_ID
+```

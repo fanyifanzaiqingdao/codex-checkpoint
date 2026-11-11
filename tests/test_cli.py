@@ -58,7 +58,40 @@ class Journal(unittest.TestCase):
             self.assertIn('busy', run('resolve', record_id, '--status', 'active', '--reason', 'test').stderr)
             lock.unlink()
             self.assertEqual(before, (Path(folder) / '.checkpoint/journal.json').read_bytes())
-            self.assertIn('revoked', run('resume').stdout)
+            self.assertNotIn('revoked', run('resume').stdout)
+            self.assertIn('revoked', run('resume', '--full').stdout)
+
+class TaskHistory(unittest.TestCase):
+    def test_isolation_history_and_legacy(self):
+        import json
+        with tempfile.TemporaryDirectory() as folder:
+            subprocess.run(['git', 'init', folder], check=True, capture_output=True)
+            def run(task, *args):
+                return subprocess.run([sys.executable, str(CLI), '--repo', folder, '--task', task, *args], capture_output=True, text=True)
+            for task in ('default', 'login', 'billing'):
+                self.assertEqual(run(task, 'init').returncode, 0)
+                self.assertEqual(run(task, 'save', '--goal', task, '--todo', 'next').returncode, 0)
+            payload = Path(folder) / '.checkpoint/payload.json'
+            payload.write_text(json.dumps(dict(text='Keep API', source='user', scope='login', certainty='explicit', evidence='user request')))
+            rid = run('login', 'record', 'constraint', '--file', str(payload)).stdout.strip()
+            self.assertEqual(run('login', 'save', '--goal', 'login v2').returncode, 0)
+            saved = json.loads((Path(folder) / '.checkpoint/tasks/login/latest.json').read_text())
+            cid = saved['checkpoint_id']
+            self.assertEqual(run('login', 'resolve', rid, '--status', 'revoked', '--reason', 'new request').returncode, 0)
+            self.assertNotIn('Keep API', run('billing', 'resume').stdout)
+            self.assertNotIn('Keep API', run('login', 'resume').stdout)
+            self.assertIn('Keep API', run('login', 'resume', '--checkpoint', cid).stdout)
+            self.assertIn('revoked', run('login', 'resume', '--full').stdout)
+            self.assertEqual(len(run('login', 'history').stdout.splitlines()), 2)
+            self.assertEqual(set(run('default', 'tasks').stdout.splitlines()), {'default', 'login', 'billing'})
+            self.assertNotEqual(run('../outside', 'init').returncode, 0)
+            self.assertNotEqual(run('login', 'resume', '--checkpoint', '../latest').returncode, 0)
+            legacy = Path(folder) / '.checkpoint/latest.json'
+            old = json.loads(legacy.read_text()); old.pop('checkpoint_id'); legacy.write_text(json.dumps(old))
+            self.assertEqual(run('default', 'save', '--goal', 'new default').returncode, 0)
+            goals = [json.loads(f.read_text())['goal'] for f in (legacy.parent / 'history').glob('*.json')]
+            self.assertIn('default', goals)
+            self.assertIn('new default', goals)
 
 if __name__ == "__main__":
     unittest.main()

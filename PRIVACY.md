@@ -6,6 +6,6 @@ The bundled Python tool makes no network requests and includes no analytics or p
 
 When your coding assistant reads these records, their contents become available to that assistant and may be processed according to the host application's settings and policies. This plugin does not control the host application's processing or GitHub's handling of support reports.
 
-Records remain on your device until you delete them. Saving replaces latest.json; journal.json retains lifecycle history. To delete task memory, remove the project's .checkpoint directory after stopping writers. Your backups or exported copies may retain data. Git's local ignore rule is not encryption and does not prevent you from sharing records manually.
+Records remain on your device until you delete them. Saving replaces latest.json and retains historical progress and journal snapshots in history/. Named tasks are stored under .checkpoint/tasks/. History is not automatically pruned; journal.json retains lifecycle history. To delete task memory, remove the project's .checkpoint directory after stopping writers. Your backups or exported copies may retain data. Git's local ignore rule is not encryption and does not prevent you from sharing records manually.
 
 Do not post private records or credentials in public GitHub issues. The maintainer receives information you voluntarily submit through email or GitHub; those services apply their own policies. No guaranteed support-response or deletion deadline is promised by this document.

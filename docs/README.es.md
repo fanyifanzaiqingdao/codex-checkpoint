@@ -61,3 +61,18 @@ checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECOR
   "text": "Do not change the database schema"
 }
 ```
+
+## Tareas e historial
+
+Use --task antes del comando para aislar tareas. Si se omite, se usa la tarea predeterminada anterior. Cada guardado conserva progreso y diario en history/, sin limpieza automática. El diario histórico del formato anterior no se puede reconstruir. resume muestra registros activos; --full muestra todos los detalles. Consultar un checkpoint antiguo no restaura archivos ni cambia latest.
+
+```sh
+checkpoint --task login init
+checkpoint --task login save --goal "Fix login" --todo "Test refresh"
+checkpoint --task billing init
+checkpoint tasks
+checkpoint --task login history
+checkpoint --task login resume
+checkpoint --task login resume --full
+checkpoint --task login resume --checkpoint CHECKPOINT_ID
+```

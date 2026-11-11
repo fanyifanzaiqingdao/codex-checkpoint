@@ -61,3 +61,18 @@ checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECOR
   "text": "Do not change the database schema"
 }
 ```
+
+## Tasks, history and concise resume
+
+Use --task before the command to isolate tasks. No shared current-task pointer. Omitting it selects the legacy default in .checkpoint/. Named tasks live in .checkpoint/tasks/ID/. Every save retains a full snapshot and journal in history/; latest.json is replaced but history is not pruned. Legacy journal history cannot be reconstructed: its first archived snapshot includes the journal at replacement time. Resume is concise by default; --full includes completed work, checks, evidence and inactive lifecycle history. Historical resume is read-only and does not restore code or replace latest. Recheck current requirements before acting.
+
+```sh
+checkpoint --task login init
+checkpoint --task login save --goal "Fix login" --todo "Test refresh"
+checkpoint --task billing init
+checkpoint tasks
+checkpoint --task login history
+checkpoint --task login resume
+checkpoint --task login resume --full
+checkpoint --task login resume --checkpoint CHECKPOINT_ID
+```

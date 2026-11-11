@@ -61,3 +61,18 @@ checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECOR
   "text": "Do not change the database schema"
 }
 ```
+
+## 작업과 기록
+
+명령 앞에 --task를 지정해 작업을 분리합니다. 생략하면 기존 기본 작업입니다. 저장할 때마다 history/에 진행 상황과 당시 기록을 보관하며 자동 삭제하지 않습니다. 이전 형식의 과거 기록은 재구성할 수 없습니다. 기본 복원은 유효한 기록만 표시하고 --full은 전체 이력을 표시합니다. 과거 기록 조회는 코드나 최신 상태를 변경하지 않습니다.
+
+```sh
+checkpoint --task login init
+checkpoint --task login save --goal "Fix login" --todo "Test refresh"
+checkpoint --task billing init
+checkpoint tasks
+checkpoint --task login history
+checkpoint --task login resume
+checkpoint --task login resume --full
+checkpoint --task login resume --checkpoint CHECKPOINT_ID
+```

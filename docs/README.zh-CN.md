@@ -61,3 +61,18 @@ checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECOR
   "text": "Do not change the database schema"
 }
 ```
+
+## 任务隔离、历史检查点与精简恢复
+
+在命令前使用 --task 指定任务，不共享“当前任务”状态。省略时使用旧版默认目录 .checkpoint/；命名任务保存在 .checkpoint/tasks/任务ID/。每次保存都会在 history/ 保留摘要和当时的结构化记录，latest.json 仍会替换，但历史不会自动清理。旧版无法还原过去的日志，首次归档时只能使用替换当时的日志。默认恢复只显示约束、待办、未验证事项和有效记录；--full 查看完成项、验证、证据及完整历史。读取历史不恢复代码、不覆盖最新进度，执行前需核对当前要求。
+
+```sh
+checkpoint --task login init
+checkpoint --task login save --goal "Fix login" --todo "Test refresh"
+checkpoint --task billing init
+checkpoint tasks
+checkpoint --task login history
+checkpoint --task login resume
+checkpoint --task login resume --full
+checkpoint --task login resume --checkpoint CHECKPOINT_ID
+```
