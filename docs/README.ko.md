@@ -37,3 +37,27 @@ checkpoint --repo /path/to/project status
 ## 개인정보 및 제한
 
 기록은 .checkpoint/latest.json에 저장되며 Git 로컬 제외 규칙에 추가됩니다. 네트워크 통신, 채팅 읽기, 코드 수정, 자동 저장 연동은 없습니다. 공유 전에 민감한 내용을 확인하세요. Git 상태와 SHA-256으로 추적 파일과 무시되지 않은 새 파일의 변경을 감지합니다. 무시된 파일과 서브모듈 내부는 제외됩니다. 파일이 안정된 상태에서 저장하세요. resume은 새 채팅에 붙여 넣을 텍스트만 출력하며 Codex 실행이나 파일 복원은 하지 않습니다.
+
+## 구조화된 작업 기억
+
+Codex에 “이 작업 중 task-checkpoint로 사용자 제약, 결정 이유, 실패한 시도를 계속 기록해 주세요”라고 말하세요. 백그라운드 기능이 아니라 도우미가 중요한 시점에 호출합니다.
+
+기록은 .checkpoint/journal.json에 ID, 종류, 생성 시간, 불변 내용, 상태 이력으로 저장됩니다. 공통 필드는 source, scope, certainty, evidence입니다. 제약은 text, 결정은 choice와 reason, 시도는 action, observed, conclusion, retry_when이 필수입니다. save는 기록을 지우지 않습니다. resume은 전체 이력을 표시하며 마지막 상태로 유효성을 판단합니다. 증거는 사용자가 제공한 설명입니다. 동시 쓰기는 재시도하세요.
+
+```sh
+checkpoint record constraint --file constraint.json
+checkpoint record decision --file decision.json
+checkpoint record attempt --file attempt.json
+checkpoint records
+checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECORD_ID"
+```
+
+```json
+{
+  "source": "user",
+  "scope": "current release",
+  "certainty": "explicit",
+  "evidence": "User explicitly requested no database schema changes",
+  "text": "Do not change the database schema"
+}
+```

@@ -36,4 +36,28 @@ checkpoint --repo /path/to/project status
 
 ## Privacy and limitations
 
-Snapshots live in .checkpoint/latest.json and are excluded locally from Git. No network requests, chat access, code modifications, or automatic assistant hooks. Review exported text before sharing: goals and file paths may be sensitive. Git state and SHA-256 fingerprints detect tracked and nonignored untracked file changes; ignored files and submodule contents are excluded. Save while files are stable. Resume prints text to paste into a new assistant chat; it does not launch Codex or restore files.
+Snapshots live in .checkpoint/latest.json and are excluded locally from Git. No network requests, chat database access, code modifications, or background assistant hooks. Review exported text before sharing: goals and file paths may be sensitive. Git state and SHA-256 fingerprints detect tracked and nonignored untracked file changes; ignored files and submodule contents are excluded. Save while files are stable. Resume prints text to paste into a new assistant chat; it does not launch Codex or restore files.
+
+## Structured task memory
+
+Enable ongoing maintenance by telling Codex: “During this task, maintain user constraints, decisions and failed attempts with task-checkpoint.” It records meaningful events while working, not every tool call. This relies on assistant calls, not background hooks.
+
+Records are stored separately in .checkpoint/journal.json. Each has an ID, kind, creation time, immutable data and lifecycle history. Required common fields: source (user/assistant/tool), scope, certainty (explicit/hypothesis/observed), evidence. Constraints require text; decisions require choice and reason (optional alternatives with choice and rejected_because); attempts require action, observed, conclusion and retry_when. Evidence is descriptive and is not independently certified. save only replaces latest.json; it preserves journal.json. resume includes all records, even without a snapshot. The last lifecycle status determines whether a record is active. Add a replacement before superseding an old record, and reference the new ID in the reason. Concurrent writes fail with a retry message. Never remove journal.lock until a crashed writer is confirmed stopped.
+
+```sh
+checkpoint record constraint --file constraint.json
+checkpoint record decision --file decision.json
+checkpoint record attempt --file attempt.json
+checkpoint records
+checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECORD_ID"
+```
+
+```json
+{
+  "source": "user",
+  "scope": "current release",
+  "certainty": "explicit",
+  "evidence": "User explicitly requested no database schema changes",
+  "text": "Do not change the database schema"
+}
+```

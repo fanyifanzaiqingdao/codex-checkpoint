@@ -37,3 +37,27 @@ checkpoint --repo /path/to/project status
 ## プライバシーと制限
 
 記録は .checkpoint/latest.json に保存され、Git のローカル除外設定で無視されます。通信、チャットの読み取り、コード変更、自動保存連携はありません。共有前に機密情報を確認してください。Git 状態と SHA-256 は追跡済みファイルと無視されていない新規ファイルを確認します。無視対象とサブモジュール内部は対象外です。ファイルが安定した状態で保存してください。resume は新しいチャットに貼る文章だけを出力し、Codex の起動やファイルの復元は行いません。
+
+## 構造化タスク記憶
+
+Codex に「この作業中、task-checkpoint でユーザーの制約、判断理由、失敗した試行を継続して記録してください」と伝えます。バックグラウンド処理ではなく、助手が重要な節目で呼び出します。
+
+記録は .checkpoint/journal.json に保存され、ID、種類、作成時刻、不変の内容、状態履歴を持ちます。共通項目は source、scope、certainty、evidence。制約は text、判断は choice と reason、試行は action、observed、conclusion、retry_when が必須です。save は記録を消しません。resume は全履歴を表示し、最後の状態で有効性を判断します。証拠は自己申告です。並行書き込みは再試行してください。
+
+```sh
+checkpoint record constraint --file constraint.json
+checkpoint record decision --file decision.json
+checkpoint record attempt --file attempt.json
+checkpoint records
+checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECORD_ID"
+```
+
+```json
+{
+  "source": "user",
+  "scope": "current release",
+  "certainty": "explicit",
+  "evidence": "User explicitly requested no database schema changes",
+  "text": "Do not change the database schema"
+}
+```

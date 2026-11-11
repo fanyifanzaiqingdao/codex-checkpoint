@@ -37,3 +37,27 @@ checkpoint --repo /path/to/project status
 ## 隐私与边界
 
 检查点位于 .checkpoint/latest.json，通过 Git 本地排除规则忽略。工具不联网、不读取聊天、不修改代码，也没有自动触发保存的助手集成。分享交接文本前请检查敏感目标和文件路径。Git 状态与 SHA-256 指纹用于检测已跟踪及未忽略的新文件变化，不检查被忽略文件和子模块内部内容。请在文件稳定时保存。resume 仅输出可粘贴到新聊天的文本，不启动 Codex、不恢复文件。
+
+## 结构化任务记忆
+
+对 Codex 说：“本任务过程中，请用 task-checkpoint 持续记录用户约束、决策和失败尝试。”插件会指导助手在重要事件发生后记录，不记录每次工具调用。这依赖助手主动调用，不是后台自动监听。
+
+记录单独保存在 .checkpoint/journal.json，每条包含 ID、类型、创建时间、不可变内容和状态历史。通用必填字段：source（user/assistant/tool）、scope（适用范围）、certainty（explicit/hypothesis/observed）、evidence（证据描述）。约束填写 text；决策填写 choice、reason，可选 alternatives（每项包含 choice、rejected_because）；尝试填写 action、observed、conclusion、retry_when。证据由助手或用户描述，并非工具独立认证。save 只覆盖 latest.json，不覆盖 journal.json。resume 即使没有进度摘要，也会读取结构化记录。最后一条历史状态决定是否有效。替代记录时先添加新记录，再将旧记录标记 superseded，并在原因中引用新 ID。并发写入会提示重试；只有确认写入进程已停止后才能清理残留 journal.lock。
+
+```sh
+checkpoint record constraint --file constraint.json
+checkpoint record decision --file decision.json
+checkpoint record attempt --file attempt.json
+checkpoint records
+checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECORD_ID"
+```
+
+```json
+{
+  "source": "user",
+  "scope": "current release",
+  "certainty": "explicit",
+  "evidence": "User explicitly requested no database schema changes",
+  "text": "Do not change the database schema"
+}
+```

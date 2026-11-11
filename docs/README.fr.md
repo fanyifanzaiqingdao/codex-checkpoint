@@ -37,3 +37,27 @@ checkpoint --repo /path/to/project status
 ## Confidentialité et limites
 
 Les données sont dans .checkpoint/latest.json, exclu localement de Git. Aucun accès aux conversations, appel réseau, changement de code ou enregistrement automatique intégré. Vérifiez les données sensibles avant tout partage. Git et SHA-256 détectent les changements des fichiers suivis et nouveaux non ignorés ; les fichiers ignorés et le contenu des sous-modules sont exclus. Sauvegardez lorsque les fichiers sont stables. resume affiche du texte à coller dans une nouvelle conversation, sans lancer Codex ni restaurer les fichiers.
+
+## Mémoire structurée
+
+Demandez à Codex : « Pendant cette tâche, utilise task-checkpoint pour conserver les contraintes, décisions et tentatives échouées ». L’assistant enregistre les étapes importantes ; aucun processus en arrière-plan.
+
+Les entrées sont dans .checkpoint/journal.json : ID, type, date, données immuables et historique. Champs communs : source, scope, certainty, evidence. Contraintes : text ; décisions : choice et reason ; tentatives : action, observed, conclusion, retry_when. save conserve le journal. resume affiche les historiques ; le dernier état indique la validité. Les preuves sont déclarées, pas certifiées. Réessayez en cas d’écriture simultanée.
+
+```sh
+checkpoint record constraint --file constraint.json
+checkpoint record decision --file decision.json
+checkpoint record attempt --file attempt.json
+checkpoint records
+checkpoint resolve RECORD_ID --status superseded --reason "Replaced by NEW_RECORD_ID"
+```
+
+```json
+{
+  "source": "user",
+  "scope": "current release",
+  "certainty": "explicit",
+  "evidence": "User explicitly requested no database schema changes",
+  "text": "Do not change the database schema"
+}
+```
