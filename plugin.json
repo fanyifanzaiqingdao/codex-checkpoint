@@ -2,6 +2,16 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "codex-checkpoint",
   "version": "0.3.0",
-  "description": "Save and resume local coding tasks through conversation.",
-  "license": "MIT"
+  "description": "Codex task memory plugin: preserve user constraints, decisions, failed attempts and checkpoints to resume coding tasks.",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "codex-plugin",
+    "checkpoint",
+    "task-memory",
+    "context",
+    "handoff",
+    "coding-assistant"
+  ],
+  "repository": "https://github.com/fanyifanzaiqingdao/codex-checkpoint"
 }
