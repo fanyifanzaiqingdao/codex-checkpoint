@@ -1,0 +1,20 @@
+{
+  "name": "codex-checkpoint-local",
+  "interface": {
+    "displayName": "Codex Checkpoint"
+  },
+  "plugins": [
+    {
+      "name": "codex-checkpoint",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

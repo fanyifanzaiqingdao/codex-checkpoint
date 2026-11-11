@@ -1,5 +1,13 @@
 # Codex Checkpoint
 
+## Codex plugin (recommended)
+
+Install this repository as a local plugin marketplace. With a recent Codex CLI, run the command below from this repository. Open the desktop plugin directory, select Codex Checkpoint, install and enable it, then start a new chat in your target Git project. Availability and labels vary by client version. Say “Use task-checkpoint to save current progress” or “Use task-checkpoint to resume the last task”. Codex summarizes and runs the bundled script; no pip installation or manual field entry is required. Python 3.10+ and Git are still required. Saving is conversational, not automatic; in-app installation and invocation have not yet been verified.
+
+```sh
+codex plugin marketplace add .
+```
+
 Local task handoffs for coding assistants. Python 3.10+ and Git are required.
 
 [en](README.md) | [zh-CN](docs/README.zh-CN.md) | [ja](docs/README.ja.md) | [ko](docs/README.ko.md) | [es](docs/README.es.md) | [fr](docs/README.fr.md)

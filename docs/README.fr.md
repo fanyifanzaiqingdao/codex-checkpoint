@@ -1,5 +1,13 @@
 # Codex Checkpoint
 
+## Plugin Codex (recommandé)
+
+Exécutez la commande ci-dessous depuis ce dépôt, puis installez et activez le plugin dans le répertoire de plugins de bureau. Ouvrez une nouvelle conversation dans votre projet Git et demandez « Utilise task-checkpoint pour sauvegarder la progression » ou « Utilise task-checkpoint pour reprendre la tâche ». Pas besoin de pip ; Python 3.10+ et Git restent nécessaires. La sauvegarde n’est pas automatique. La disponibilité dépend du client. L’installation et l’appel dans l’application restent à vérifier.
+
+```sh
+codex plugin marketplace add .
+```
+
 Transmission locale de tâches pour assistants de programmation. Python 3.10+ et Git sont nécessaires.
 
 [en](../README.md) | [zh-CN](README.zh-CN.md) | [ja](README.ja.md) | [ko](README.ko.md) | [es](README.es.md) | [fr](README.fr.md)

@@ -1,5 +1,13 @@
 # Codex Checkpoint：任务检查点
 
+## Codex 插件（推荐）
+
+在本仓库目录运行下面的命令，将仓库添加为本地插件来源。然后打开桌面端插件目录，找到 Codex Checkpoint，安装并启用，在目标 Git 项目中新建聊天。入口名称与可用性因客户端版本而异。直接说“使用 task-checkpoint 保存当前进度”或“使用 task-checkpoint 继续上次任务”。Codex 会整理信息并运行附带脚本，无需 pip 安装或手动填写字段。仍需要 Python 3.10+ 和 Git。保存需要在聊天中触发，并非自动保存。目前尚未完成桌面端安装与调用验证。
+
+```sh
+codex plugin marketplace add .
+```
+
 为编程助手保存本地任务交接。需要 Python 3.10+ 和 Git。
 
 [en](../README.md) | [zh-CN](README.zh-CN.md) | [ja](README.ja.md) | [ko](README.ko.md) | [es](README.es.md) | [fr](README.fr.md)

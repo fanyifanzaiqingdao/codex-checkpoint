@@ -1,5 +1,13 @@
 # Codex Checkpoint
 
+## Codex プラグイン（推奨）
+
+このリポジトリで次のコマンドを実行し、デスクトップのプラグイン一覧からインストールして有効にしてください。対象の Git プロジェクトで新しいチャットを開き、「task-checkpoint で進捗を保存」または「task-checkpoint で前の作業を再開」と伝えます。pip は不要ですが Python 3.10+ と Git が必要です。自動保存ではありません。画面や対応状況はバージョンによって異なります。アプリ内のインストールと呼び出しは未検証です。
+
+```sh
+codex plugin marketplace add .
+```
+
 コーディング助手向けのローカル作業引き継ぎ。Python 3.10 以上と Git が必要です。
 
 [en](../README.md) | [zh-CN](README.zh-CN.md) | [ja](README.ja.md) | [ko](README.ko.md) | [es](README.es.md) | [fr](README.fr.md)

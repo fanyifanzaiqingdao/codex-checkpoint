@@ -1,5 +1,13 @@
 # Codex Checkpoint
 
+## Plugin de Codex (recomendado)
+
+Ejecute el comando siguiente desde este repositorio e instale y active el plugin en el directorio de plugins de escritorio. Abra un chat nuevo en su proyecto Git y pida “Usa task-checkpoint para guardar el progreso” o “Usa task-checkpoint para retomar la tarea”. No necesita pip; requiere Python 3.10+ y Git. No guarda automáticamente. La disponibilidad depende del cliente. La instalación e invocación dentro de la aplicación aún no se han verificado.
+
+```sh
+codex plugin marketplace add .
+```
+
 Relevo local de tareas para asistentes de programación. Requiere Python 3.10+ y Git.
 
 [en](../README.md) | [zh-CN](README.zh-CN.md) | [ja](README.ja.md) | [ko](README.ko.md) | [es](README.es.md) | [fr](README.fr.md)
