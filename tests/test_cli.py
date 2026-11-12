@@ -93,5 +93,40 @@ class TaskHistory(unittest.TestCase):
             self.assertIn('default', goals)
             self.assertIn('new default', goals)
 
+class RecoveryDetails(unittest.TestCase):
+    def test_file_changes_replacement_and_priority(self):
+        import json
+        with tempfile.TemporaryDirectory() as folder:
+            subprocess.run(['git', 'init', folder], check=True, capture_output=True)
+            def run(*args):
+                return subprocess.run([sys.executable, str(CLI), '--repo', folder, *args], capture_output=True, text=True)
+            run('init')
+            root = Path(folder)
+            (root/'a').write_text('before'); (root/'b').write_text('remove')
+            run('save', '--goal', 'test', '--verified', 'unit checks')
+            (root/'a').write_text('after'); (root/'b').unlink(); (root/'c').write_text('new')
+            output = run('resume').stdout
+            for expected in ('modified: "a"', 'removed: "b"', 'added: "c"', 'may be stale'):
+                self.assertIn(expected, output)
+            payload = root/'.checkpoint/input.json'
+            common = dict(source='user', scope='task', certainty='explicit', evidence='request')
+            def record(kind, fields, *extra):
+                payload.write_text(json.dumps(dict(common, **fields)))
+                result = run('record', kind, '--file', str(payload), *extra)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                return result.stdout.strip()
+            record('decision', dict(choice='CHOICE', reason='compatibility'))
+            old = record('constraint', dict(text='OLD_RULE'))
+            new = record('constraint', dict(text='NEW_RULE'), '--supersedes', old)
+            records = json.loads(run('records').stdout)['records']
+            self.assertEqual(records[-1]['supersedes'], [old])
+            self.assertEqual(records[-2]['history'][-1]['replacement_id'], new)
+            output = run('resume').stdout
+            self.assertNotIn('OLD_RULE', output)
+            self.assertLess(output.index('NEW_RULE'), output.index('CHOICE'))
+            payload.write_text(json.dumps(dict(common, text='invalid')))
+            self.assertNotEqual(run('record', 'constraint', '--file', str(payload), '--supersedes', 'unknown').returncode, 0)
+            self.assertEqual(len(json.loads(run('records').stdout)['records']), 3)
+
 if __name__ == "__main__":
     unittest.main()

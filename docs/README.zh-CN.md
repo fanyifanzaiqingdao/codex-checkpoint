@@ -76,3 +76,12 @@ checkpoint --task login resume
 checkpoint --task login resume --full
 checkpoint --task login resume --checkpoint CHECKPOINT_ID
 ```
+
+## v0.5.0
+
+恢复时列出新增、删除、修改的具体文件，并提醒验证结果可能过期。旧检查点无法提供逐文件对比。有效记录按约束、决策、失败尝试排序，同类中优先用户来源。使用 --supersedes 原子替代记录，旧记录历史通过 replacement_id 指向新记录。重命名显示为删除加新增，忽略文件和子模块内部仍不检查。
+
+```sh
+checkpoint --task login record constraint --file new-rule.json --supersedes OLD_RECORD_ID
+checkpoint --task login resume
+```

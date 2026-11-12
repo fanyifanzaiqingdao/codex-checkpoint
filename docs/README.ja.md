@@ -76,3 +76,12 @@ checkpoint --task login resume
 checkpoint --task login resume --full
 checkpoint --task login resume --checkpoint CHECKPOINT_ID
 ```
+
+## v0.5.0
+
+復元時に追加・削除・変更ファイルと検証の古さを表示します。旧記録は個別比較できません。制約、判断、試行の順で、同種ではユーザー由来を優先します。--supersedes は原子的に記録を置換し、replacement_id で関連付けます。
+
+```sh
+checkpoint --task login record constraint --file new-rule.json --supersedes OLD_RECORD_ID
+checkpoint --task login resume
+```

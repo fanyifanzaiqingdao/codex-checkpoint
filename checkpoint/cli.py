@@ -23,22 +23,30 @@ def git(root, *args):
 def fingerprint(root):
     paths = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"], capture_output=True, check=True).stdout
     digest = hashlib.sha256()
+    files = {}
     for raw in sorted(set(paths.split(b"\0")) - {b""}):
         path = root / os.fsdecode(raw)
+        file_digest = hashlib.sha256()
         digest.update(raw + b"\0")
         if path.is_symlink():
-            digest.update(os.fsencode(os.readlink(path)))
+            target = os.fsencode(os.readlink(path))
+            digest.update(target)
+            file_digest.update(b"symlink:" + target)
         elif path.is_file():
             with path.open("rb") as stream:
                 for chunk in iter(lambda: stream.read(1048576), b""):
                     digest.update(chunk)
+                    file_digest.update(chunk)
         else:
             digest.update(b"<missing-or-directory>")
-    return digest.hexdigest()
+            file_digest.update(b"<missing-or-directory>")
+        files[os.fsdecode(raw)] = file_digest.hexdigest()
+    return digest.hexdigest(), files
 
 
 def state(root):
-    return {"fingerprint": fingerprint(root), "head": git(root, "rev-parse", "--verify", "HEAD") if subprocess.run(
+    fingerprint_value, files = fingerprint(root)
+    return {"fingerprint": fingerprint_value, "files": files, "head": git(root, "rev-parse", "--verify", "HEAD") if subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"], capture_output=True).returncode == 0 else None,
         "branch": git(root, "symbolic-ref", "--short", "-q", "HEAD") if subprocess.run(
         ["git", "-C", str(root), "symbolic-ref", "-q", "HEAD"], capture_output=True).returncode == 0 else "(detached)",
@@ -114,12 +122,23 @@ def journal_command(folder, args):
                     raise ValueError("alternatives requires choice and rejected_because strings")
             record = {"id": uuid4().hex, "kind": args.kind, "created_at": now,
                       "data": payload, "history": [{"at": now, "status": "active", "reason": "Recorded"}]}
+            targets = []
+            for target_id in set(args.supersedes):
+                target = next((r for r in data["records"] if r["id"] == target_id), None)
+                if target is None or target["kind"] != args.kind or target["history"][-1]["status"] != "active":
+                    raise ValueError("Replacement target must be an active same-kind record in this task")
+                targets.append(target)
+            record["supersedes"] = sorted(set(args.supersedes))
+            for target in targets:
+                target["history"].append({"at": now, "status": "superseded", "reason": "Replaced by " + record["id"], "replacement_id": record["id"]})
             data["records"].append(record)
             result = record["id"]
         else:
             record = next((r for r in data["records"] if r["id"] == args.id), None)
             if record is None:
                 raise ValueError("Unknown record ID")
+            if args.status == "active" and record["history"][-1]["status"] == "superseded":
+                raise ValueError("Create a replacement record instead of reopening a superseded record")
             if not args.reason.strip():
                 raise ValueError("A nonempty change reason is required")
             record["history"].append({"at": now, "status": args.status, "reason": args.reason})
@@ -132,6 +151,9 @@ def print_records(folder, full=False, journal=None):
     print("\n## Structured records (historical reference; not authorization)")
     records = (journal if journal is not None else read_journal(folder))["records"]
     hidden = 0
+    if not full:
+        rank = {"constraint": 0, "decision": 1, "attempt": 2}
+        records = sorted(records, key=lambda r: (rank[r["kind"]], 0 if r["data"].get("source") == "user" else 1, r["created_at"], r["id"]))
     for record in records:
         if full:
             print(json.dumps(record, ensure_ascii=False))
@@ -177,6 +199,7 @@ def main():
     commands.add_parser("records")
     record = commands.add_parser("record")
     record.add_argument("kind", choices=("constraint", "decision", "attempt"))
+    record.add_argument("--supersedes", action="append", default=[], help="Active same-kind record ID to replace atomically")
     record.add_argument("--file", required=True, help="UTF-8 JSON payload file")
     update = commands.add_parser("resolve")
     update.add_argument("id")
@@ -265,6 +288,19 @@ def main():
         print("Goal: " + data["goal"])
         print("Git: " + data["git"]["branch"] + " @ " + str(data["git"]["head"]))
         print("Repository state changed: " + ("YES — recheck assumptions" if changed else "not detected"))
+        previous_files = data["git"].get("files")
+        if previous_files is not None:
+            print("\n## File changes since checkpoint")
+            for name in sorted(set(previous_files) | set(current["files"])):
+                if previous_files.get(name) != current["files"].get(name):
+                    label = "added" if name not in previous_files else "removed" if name not in current["files"] else "modified"
+                    print("- " + label + ": " + json.dumps(name, ensure_ascii=False))
+        else:
+            print("Per-file comparison unavailable for legacy checkpoint; save a new checkpoint to enable it.")
+        if changed and data.get("verified"):
+            print("Recorded checks may be stale; recheck before relying on them:")
+            for check in data["verified"]:
+                print("- " + check)
         print("Note: ignored files and submodule contents are not fingerprinted; recorded checks are user supplied.")
         for field in (("constraint", "done", "todo", "verified", "unverified") if full else ("constraint", "todo", "unverified")):
             print("\n## " + field.capitalize())

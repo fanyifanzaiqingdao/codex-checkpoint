@@ -76,3 +76,12 @@ checkpoint --task login resume
 checkpoint --task login resume --full
 checkpoint --task login resume --checkpoint CHECKPOINT_ID
 ```
+
+## v0.5.0
+
+Resume lists added, removed and modified files and warns about potentially stale checks. Legacy checkpoints cannot provide per-file comparisons. Active records sort by constraints, decisions, then attempts; user-sourced records come first within each kind. Replace records atomically with --supersedes; the old lifecycle entry points to replacement_id. Renames appear as removal plus addition. Ignored files and submodule contents remain excluded.
+
+```sh
+checkpoint --task login record constraint --file new-rule.json --supersedes OLD_RECORD_ID
+checkpoint --task login resume
+```

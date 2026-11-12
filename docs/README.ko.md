@@ -76,3 +76,12 @@ checkpoint --task login resume
 checkpoint --task login resume --full
 checkpoint --task login resume --checkpoint CHECKPOINT_ID
 ```
+
+## v0.5.0
+
+복원 시 추가·삭제·수정 파일과 검증 만료 가능성을 표시합니다. 이전 기록은 파일별 비교를 지원하지 않습니다. 제약, 결정, 시도 순으로 정렬하며 같은 종류에서는 사용자 기록이 우선합니다. --supersedes로 원자적으로 대체하고 replacement_id로 연결합니다.
+
+```sh
+checkpoint --task login record constraint --file new-rule.json --supersedes OLD_RECORD_ID
+checkpoint --task login resume
+```

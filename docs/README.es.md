@@ -76,3 +76,12 @@ checkpoint --task login resume
 checkpoint --task login resume --full
 checkpoint --task login resume --checkpoint CHECKPOINT_ID
 ```
+
+## v0.5.0
+
+La recuperación muestra archivos añadidos, eliminados y modificados y avisa de verificaciones posiblemente obsoletas. Orden: restricciones, decisiones e intentos; primero el usuario en cada tipo. --supersedes sustituye registros de forma atómica con enlaces replacement_id. Los checkpoints antiguos no permiten comparar archivos individuales.
+
+```sh
+checkpoint --task login record constraint --file new-rule.json --supersedes OLD_RECORD_ID
+checkpoint --task login resume
+```
